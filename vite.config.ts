@@ -7,11 +7,10 @@ export default defineConfig({
     // Stringify the API key from environment, or use an empty string as fallback
     'process.env.API_KEY': JSON.stringify(process.env.API_KEY || '')
   },
-  server: {
-    port: 3000
-  },
+  base: './',
   build: {
     outDir: 'dist',
+    emptyOutDir: true,
     sourcemap: false
   }
 });
