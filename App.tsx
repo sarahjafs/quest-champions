@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { AppState, Child, Chore, Reward, LogEntry } from './types';
+import { AppState, LogEntry, Chore } from './types';
 import { INITIAL_STATE, calculateLevel, DEFAULT_CLOUD_CONFIG } from './constants';
 import ChildView from './components/ChildView';
 import ParentView from './components/ParentView';
@@ -10,20 +9,27 @@ import { initSupabase, subscribeToFamily, syncFamilyData, getFamilyData } from '
 
 const App: React.FC = () => {
   const [state, setState] = useState<AppState>(() => {
-    const saved = localStorage.getItem('chorequest_state');
-    if (!saved) return INITIAL_STATE;
-    
-    const parsed = JSON.parse(saved);
-    if (!parsed.cloud || !parsed.cloud.supabaseUrl) {
-      return { 
-        ...parsed, 
-        cloud: { 
-          ...DEFAULT_CLOUD_CONFIG, 
-          familyCode: parsed.cloud?.familyCode || '' 
-        } 
-      };
+    try {
+      const saved = localStorage.getItem('chorequest_state');
+      if (!saved) return INITIAL_STATE;
+      
+      const parsed = JSON.parse(saved);
+      if (!parsed || typeof parsed !== 'object') return INITIAL_STATE;
+
+      if (!parsed.cloud || !parsed.cloud.supabaseUrl) {
+        return { 
+          ...parsed, 
+          cloud: { 
+            ...DEFAULT_CLOUD_CONFIG, 
+            familyCode: parsed.cloud?.familyCode || '' 
+          } 
+        };
+      }
+      return parsed as AppState;
+    } catch (e) {
+      console.warn("Storage data corrupted or incompatible, reverting to default parameters.", e);
+      return INITIAL_STATE;
     }
-    return parsed;
   });
   
   const [view, setView] = useState<'LANDING' | 'CHILD_SELECT' | 'CHILD_DASH' | 'PARENT_DASH'>(
@@ -120,10 +126,15 @@ const App: React.FC = () => {
       setSelectedChildId(null);
       setView('LANDING');
       
-      const currentState = JSON.parse(localStorage.getItem('chorequest_state') || '{}');
-      if (currentState.cloud) {
-        currentState.cloud.familyCode = '';
-        localStorage.setItem('chorequest_state', JSON.stringify(currentState));
+      const currentStateString = localStorage.getItem('chorequest_state');
+      if (currentStateString) {
+        try {
+          const currentState = JSON.parse(currentStateString);
+          if (currentState.cloud) {
+            currentState.cloud.familyCode = '';
+            localStorage.setItem('chorequest_state', JSON.stringify(currentState));
+          }
+        } catch (e) {}
       }
     }
   }, []);
